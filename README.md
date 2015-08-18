@@ -63,7 +63,6 @@ func testChainPromises() {
 
         // notice that we are returning another promise here!
         let step1 = fetchRandom("__step1__")
-        print("step1 just created with \(step1)")
         return step1
     }
     .then { someResult in
@@ -75,16 +74,13 @@ func testChainPromises() {
     }
     .then({ someResult in
         print("Step 2 -- complete with \(someResult)")
-
-        let step2 = someOtherPromise("__step2__")
-        return step2 
+        // last step - does not need to return anything if we don't want to
     },
     // handle failures (in any step!!)
     onRejected: { someError
         print("Error \(someError)")
-    })
-    // on complete
-    {
+    }) {
+        // on complete
         print("All steps completed")
         readyExpectation.fulfill()
     }
