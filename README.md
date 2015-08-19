@@ -91,7 +91,7 @@ These are the additional helper *then* methods of *Thenable* protocol:
 ##### `then(onFulfilled:Function?, onCompleted: CompleteFunction?) -> Thenable`
 - adds a *completion* block
 
-##### `func then(onFulfilled:Function?, onRejected:RejectedFunction?, onCompleted: CompleteFunction?) -> Thenable`
+##### `then(onFulfilled:Function?, onRejected:RejectedFunction?, onCompleted: CompleteFunction?) -> Thenable`
 - complete call with the 3 blocks - success, failure, complete. Note that *onCompleted* is invoked in both cases.
 
 ### Chaining
