@@ -9,11 +9,11 @@ From their page - [Pinky](http://lazd.github.io/Pinky/) is a no-nonsense Promise
 
 ## Keeping It Simple
 
-There are several existing frameworks for Promises/A+, Reactive, RX, you name it. I've used [ReactiveCocoa](https://github.com/ReactiveCocoa/ReactiveCocoa) before and it's very powerful. But again, the existing frameworks were either *too big* for my use-cas, or not yet fully ported to *Swift 2*.
+There are several existing frameworks for Promises/A+, Reactive, RX, you name it. I've used [ReactiveCocoa](https://github.com/ReactiveCocoa/ReactiveCocoa) before and it's very powerful. But again, the existing frameworks were either *too big* for my use-case, or not yet fully ported to *Swift 2*.
 
 My main interest was to orchestrate asynchronous into synchronous steps. Example is a upload media service, where you have a sequence of networks requests that need to happen in specific sequence.
 
-**Promises/A+** seemed like a good option, as *"a **promise** represents the eventual result of an asynchronous operation."*
+**Promises/A+** seemed like a good option, as *"a __promise__ represents the eventual result of an asynchronous operation."*
 
 **ThenKit** implements *Promises/A+* and adds a *Completion* block to be executed after all blocks are fulfilled/rejected. It's supposed to be very simple so it might not resolve all your uses cases, i.e. no cancellable or scheduled promises, hot/cold signals, etc... There are more complete frameworks for that.
 
@@ -89,10 +89,10 @@ These are the additional helper *then* methods of *Thenable* protocol:
 - provides *success/fulfill* and *failure/reject* blocks
 
 ##### `then(onFulfilled:Function?, onCompleted: CompleteFunction?) -> Thenable`
-- adds a *completion* block
+- adds *onCompleted* block
 
 ##### `then(onFulfilled:Function?, onRejected:RejectedFunction?, onCompleted: CompleteFunction?) -> Thenable`
-- complete call with the 3 blocks - success, failure, complete. Note that *onCompleted* is invoked in both cases.
+- complete call with the 3 blocks - success, failure, complete. Note that *onCompleted* is invoked whether it's fulfilled or rejected.
 
 ### Chaining
 
