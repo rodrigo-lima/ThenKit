@@ -18,8 +18,8 @@ extension Logger {
 
 // ---------------------------------------------------------------------------------------------------------------------
 // MARK: -
-public let PromiseKitTestsError1 = NSError(domain: "PromiseKitTests.Error.1", code: 1, userInfo: nil)
-public let PromiseKitTestsError2 = NSError(domain: "PromiseKitTests.Error.2", code: 2, userInfo: nil)
+public let ThenKitTestsError1 = NSError(domain: "ThenKitTests.Error.1", code: 1, userInfo: nil)
+public let ThenKitTestsError2 = NSError(domain: "ThenKitTests.Error.2", code: 2, userInfo: nil)
 
 // MARK: -
 public extension Int {
@@ -76,8 +76,41 @@ func failRandom(name:String) -> Thenable {
 
     dispatch_after(2.seconds) {
         testDebugPrint(".... REJECT failRandom \(p)")
-        p.reject(PromiseKitTestsError1)
+        p.reject(ThenKitTestsError1)
     }
     testDebugPrint(".... created failRandom \(p)")
     return p.promise
 }
+
+
+func httpGetPromise(someURL: String) -> Thenable {
+    let p = Promise()
+    p.name = "HTTP_GET_PROMISE"    // look for me in the debug logs
+
+    guard let url = NSURL(string: someURL) else {
+        let badURLErr = NSError(domain: "ThenKitTests.Error.BadURL", code: 100, userInfo: nil)
+        p.reject(badURLErr)
+        return p.promise // rejected promise
+    }
+
+    let request = NSURLRequest(URL: url)
+    let session = NSURLSession.sharedSession()
+    let task = session.dataTaskWithRequest(request) { (data, response, error) in
+        if error != nil {
+            p.reject(error!)
+        }
+        else if let r = response as? NSHTTPURLResponse where r.statusCode < 300 {
+            // wraps NSData & NSHTTPURLResponse to return
+            p.fulfill(response)
+        }
+        else {
+            let r = response as? NSHTTPURLResponse
+            let code = r?.statusCode ?? -1
+            let e = NSError(domain: NSURLErrorDomain, code: code, userInfo: nil)
+            p.reject(e)
+        }
+    }
+    task.resume()
+    return p.promise
+}
+

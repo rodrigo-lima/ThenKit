@@ -31,8 +31,8 @@ class ThenKitTests: XCTestCase {
 
         p.then({ fulfillVal in
             testDebugPrint("PROMISE - fulfillVal:\(fulfillVal)")
-            }) {
-                testDebugPrint("PROMISE - COMPLETE")
+        }) {
+            testDebugPrint("PROMISE - COMPLETE")
         }
 
         dispatch_after(1.second) { [weak p] in
@@ -57,13 +57,13 @@ class ThenKitTests: XCTestCase {
         fr.then({ value in
             testDebugPrint("SUCCESS \(value)")
             return value
-            }, onRejected: { reasone in
-                testDebugPrint("FAILURE \(reasone)")
-                return reasone
+        }, onRejected: { reasone in
+            testDebugPrint("FAILURE \(reasone)")
+            return reasone
         })
-            .then(nil, onRejected: nil) {
-                testDebugPrint("FINAL COMPLETE BLOCK...")
-                expect.fulfill()
+        .then(nil, onRejected: nil) {
+            testDebugPrint("FINAL COMPLETE BLOCK...")
+            expect.fulfill()
         }
 
         // WAIT
@@ -77,15 +77,15 @@ class ThenKitTests: XCTestCase {
         let testValue = 1234
 
         fetchNotSoRandom(expect.description, value: testValue)
-            .then(nil)
-            .then{ value in
-                testDebugPrint("SUCCESS \(value)")
-                XCTAssert(value as? Int == testValue)
-                return value
-            }
-            .then(nil) {
-                testDebugPrint("complete - done - finished....")
-                expect.fulfill()
+        .then(nil)
+        .then{ value in
+            testDebugPrint("SUCCESS \(value)")
+            XCTAssert(value as? Int == testValue)
+            return value
+        }
+        .then(nil) {
+            testDebugPrint("complete - done - finished....")
+            expect.fulfill()
         }
 
         // WAIT
@@ -99,32 +99,32 @@ class ThenKitTests: XCTestCase {
         let testValue = 1234
 
         fetchNotSoRandom(expect.description, value: testValue)
-            .then { value in
-                testDebugPrint("SUCCESS \(value)")
-                XCTAssert(value as? Int == testValue)
+        .then { value in
+            testDebugPrint("SUCCESS \(value)")
+            XCTAssert(value as? Int == testValue)
 
-                //now, throw an error here and see if it's caught below
-                throw PromiseKitTestsError1
+            //now, throw an error here and see if it's caught below
+            throw ThenKitTestsError1
+        }
+        .then(nil)
+        .then({ fulfilledValue in
+            testDebugPrint("SHOULD NOT BE HERE")
+            XCTFail()
+            return nil
+        }, onRejected: { someError in
+            testDebugPrint("SHOULD **BE** HERE -- \(someError)")
+
+            if let nserr = someError as NSError? where nserr == ThenKitTestsError1 {
+                XCTAssertTrue(true)
             }
-            .then(nil)
-            .then({ fulfilledValue in
-                testDebugPrint("SHOULD NOT BE HERE")
+            else {
                 XCTFail()
-                return nil
-                }, onRejected: { someError in
-                    testDebugPrint("SHOULD **BE** HERE -- \(someError)")
-
-                    if let nserr = someError as NSError? where nserr == PromiseKitTestsError1 {
-                        XCTAssertTrue(true)
-                    }
-                    else {
-                        XCTFail()
-                    }
-                    return someError
-            })
-            .then(nil) {
-                testDebugPrint("complete - done - finished....")
-                expect.fulfill()
+            }
+            return someError
+        })
+        .then(nil) {
+            testDebugPrint("complete - done - finished....")
+            expect.fulfill()
         }
 
         // WAIT
@@ -171,37 +171,37 @@ class ThenKitTests: XCTestCase {
         p.then(nil, onRejected: { someResult in
             testDebugPrint("fail some result ... \(someResult)")
 
-            if let nserr = someResult as NSError? where nserr == PromiseKitTestsError1 {
+            if let nserr = someResult as NSError? where nserr == ThenKitTestsError1 {
                 XCTAssertTrue(true)
             }
             else {
                 XCTFail()
             }
-            return PromiseKitTestsError2
+            return ThenKitTestsError2
         })
-            .then({ ignored in
-                testDebugPrint("should **NOT** Be here ... \(ignored)")
+        .then({ ignored in
+            testDebugPrint("should **NOT** Be here ... \(ignored)")
+            XCTFail()
+            return ignored
+        }, onRejected: { rejection in
+            testDebugPrint("fail 2 some result ... \(rejection)")
+
+            if let nserr = rejection as NSError? where nserr == ThenKitTestsError2 {
+                XCTAssertTrue(true)
+            }
+            else {
                 XCTFail()
-                return ignored
-                }, onRejected: { rejection in
-                    testDebugPrint("fail 2 some result ... \(rejection)")
+            }
 
-                    if let nserr = rejection as NSError? where nserr == PromiseKitTestsError2 {
-                        XCTAssertTrue(true)
-                    }
-                    else {
-                        XCTFail()
-                    }
-
-                    return PromiseKitTestsError2
-                }) {
-                    print ("completed")
-                    readyExpectation.fulfill()
+            return ThenKitTestsError2
+        }) {
+            print ("completed")
+            readyExpectation.fulfill()
         }
 
         // SUBSCRIBE PROMISE
         //        let r = Result<String,NSError>(error: HCMCommonKitGenericError)
-        p.reject(PromiseKitTestsError1)
+        p.reject(ThenKitTestsError1)
 
         // WAIT
         waitForExpectationsWithTimeout(10) { error in
@@ -224,12 +224,12 @@ class ThenKitTests: XCTestCase {
             XCTAssertTrue(worked)
             return someResult
 
-            }, onRejected: { failResult in
-                testDebugPrint("FAILED -- \(failResult)")
-                return failResult
-            }) {
-                testDebugPrint("COMPLETED!!!!")
-                readyExpectation.fulfill()
+        }, onRejected: { failResult in
+            testDebugPrint("FAILED -- \(failResult)")
+            return failResult
+        }) {
+            testDebugPrint("COMPLETED!!!!")
+            readyExpectation.fulfill()
         }
 
         // SUBSCRIBE PROMISE
@@ -257,18 +257,18 @@ class ThenKitTests: XCTestCase {
             XCTAssertTrue(worked)
 
             return "hello other expectation"
-            }
-            .then({ anotherResult in
-                testDebugPrint("something else ... \(anotherResult)")
+        }
+        .then({ anotherResult in
+            testDebugPrint("something else ... \(anotherResult)")
 
-                let worked = (anotherResult as? String) == "hello other expectation"
-                XCTAssertTrue(worked)
+            let worked = (anotherResult as? String) == "hello other expectation"
+            XCTAssertTrue(worked)
 
-                return anotherResult
-                }, onCompleted: {
-                    testDebugPrint("completed!!!!")
-                    readyExpectation.fulfill()
-            })
+            return anotherResult
+        }, onCompleted: {
+            testDebugPrint("completed!!!!")
+            readyExpectation.fulfill()
+        })
 
         // SUBSCRIBE PROMISE
         p.fulfill(readyExpectation.description)
@@ -296,10 +296,10 @@ class ThenKitTests: XCTestCase {
             XCTAssertTrue(worked)
 
             return someResult
-            })
-            {
-                testDebugPrint("COMPLETED!!!!")
-                readyExpectation.fulfill()
+        })
+        {
+            testDebugPrint("COMPLETED!!!!")
+            readyExpectation.fulfill()
         }
 
         // WAIT
@@ -339,9 +339,9 @@ class ThenKitTests: XCTestCase {
                 let worked = anotherResult as? String == readyExpectation.description
                 XCTAssertTrue(worked)
                 return anotherResult
-                })
-                {
-                    testDebugPrint("P1 --- completed!!!!")
+            })
+            {
+                testDebugPrint("P1 --- completed!!!!")
             }
 
             p2.then({ anotherResult in
@@ -349,10 +349,10 @@ class ThenKitTests: XCTestCase {
                 let worked = anotherResult as? String == "this is what I expect now"
                 XCTAssertTrue(worked)
                 return anotherResult
-                })
-                {
-                    testDebugPrint("P2 --- completed!!!!")
-                    readyExpectation.fulfill()
+            })
+            {
+                testDebugPrint("P2 --- completed!!!!")
+                readyExpectation.fulfill()
             }
         }
 
@@ -377,12 +377,12 @@ class ThenKitTests: XCTestCase {
             XCTAssertTrue(worked)
             return someResult
 
-            }, onRejected: { failResult in
-                testDebugPrint("FAILED -- \(failResult)")
-                return failResult
-            }) {
-                testDebugPrint("COMPLETED!!!!")
-                readyExpectation.fulfill()
+        }, onRejected: { failResult in
+            testDebugPrint("FAILED -- \(failResult)")
+            return failResult
+        }) {
+            testDebugPrint("COMPLETED!!!!")
+            readyExpectation.fulfill()
         }
 
         // SUBSCRIBE PROMISE
@@ -413,9 +413,9 @@ class ThenKitTests: XCTestCase {
             testDebugPrint("Step 1 -- done with \(someResult)")
 
             return nil
-            }) {
-                testDebugPrint("Step 1 -- COMPLETE")
-                readyExpectation.fulfill()
+        }) {
+            testDebugPrint("Step 1 -- COMPLETE")
+            readyExpectation.fulfill()
         }
 
         // WAIT
@@ -435,23 +435,23 @@ class ThenKitTests: XCTestCase {
             let step1 = failRandom("__step1__")
             testDebugPrint("step1 THAT FAILS .... ")
             return step1
-            }
-            .then({ someResult in
-                testDebugPrint("should not be here... \(someResult)")
-                return nil
+        }
+        .then({ someResult in
+            testDebugPrint("should not be here... \(someResult)")
+            return nil
 
-                }, onRejected: { someError in
-                    testDebugPrint("should **be** here ... \(someError)")
-                    if let nserr = someError as NSError? where nserr == PromiseKitTestsError1 {
-                        XCTAssertTrue(true)
-                    }
-                    else {
-                        XCTFail()
-                    }
-                    return PromiseKitTestsError2
-                }) {
-                    testDebugPrint("Step 1 -- COMPLETE")
-                    readyExpectation.fulfill()
+        }, onRejected: { someError in
+            testDebugPrint("should **be** here ... \(someError)")
+            if let nserr = someError as NSError? where nserr == ThenKitTestsError1 {
+                XCTAssertTrue(true)
+            }
+            else {
+                XCTFail()
+            }
+            return ThenKitTestsError2
+        }) {
+            testDebugPrint("Step 1 -- COMPLETE")
+            readyExpectation.fulfill()
         }
 
         // WAIT
@@ -471,21 +471,21 @@ class ThenKitTests: XCTestCase {
             XCTFail()
             return step0
             },
-            onRejected: { rejected in
-                testDebugPrint("1st THEN -- rejected \(rejected)")
-                XCTAssert(true)
-                return rejected
+        onRejected: { rejected in
+            testDebugPrint("1st THEN -- rejected \(rejected)")
+            XCTAssert(true)
+            return rejected
         })
-            .then({ fulfilled in
-                testDebugPrint("2nd THEN -- fulfilled \(fulfilled)")
-                XCTFail()
-                return nil
-                }, onRejected: { rejected in
-                    testDebugPrint("2nd THEN -- rejected \(rejected)")
-                    XCTAssert(true)
-                    return rejected
-                }) {
-                    testDebugPrint("2nd THEN -- complete")
+        .then({ fulfilled in
+            testDebugPrint("2nd THEN -- fulfilled \(fulfilled)")
+            XCTFail()
+            return nil
+        }, onRejected: { rejected in
+            testDebugPrint("2nd THEN -- rejected \(rejected)")
+            XCTAssert(true)
+            return rejected
+        }) {
+            testDebugPrint("2nd THEN -- complete")
         }
         step0.fulfill(step0)
         
@@ -499,5 +499,29 @@ class ThenKitTests: XCTestCase {
             XCTAssertNil(error)
         }
     }
-    
+
+    func testGithub() {
+        let readyExpectation = expectationWithDescription("testGithub")
+
+        // get a promise
+        httpGetPromise("http://github.com")
+        .then({ someResponse in
+            testDebugPrint("got this response: \(someResponse)")
+
+        }, onRejected: { someError in
+            testDebugPrint("some Error: \(someError)")
+            XCTFail()
+            return someError
+
+        }) {
+            testDebugPrint("and we're done..")
+            readyExpectation.fulfill()
+        }
+
+        // WAIT
+        waitForExpectationsWithTimeout(30) { error in
+            XCTAssertNil(error)
+        }
+
+    }
 }
