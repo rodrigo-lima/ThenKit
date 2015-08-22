@@ -15,11 +15,18 @@ class ThenKitTests: XCTestCase {
         super.setUp()
         // Put setup code here. This method is called before the invocation of each test method in the class.
         testDebugPrint("==============================================================================================")
+        Logger.logLevel = Logger.Level.Verbose
     }
 
     override func tearDown() {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
         super.tearDown()
+        if promises_counter == 0 {
+            Logger.green("NO MEMORY LEAK -- Promise counter ==> \(promises_counter)")
+        }
+        else {
+            Logger.red("OPS!? MEMORY LEAK -- Promise counter ==> \(promises_counter)")
+        }
     }
 
 
@@ -31,7 +38,7 @@ class ThenKitTests: XCTestCase {
 
         p.then({ fulfillVal in
             testDebugPrint("PROMISE - fulfillVal:\(fulfillVal)")
-        }) {
+        }) { success in
             testDebugPrint("PROMISE - COMPLETE")
         }
 
@@ -61,7 +68,7 @@ class ThenKitTests: XCTestCase {
             testDebugPrint("FAILURE \(reasone)")
             return reasone
         })
-        .then(nil, onRejected: nil) {
+        .then(nil, onRejected: nil) { success in
             testDebugPrint("FINAL COMPLETE BLOCK...")
             expect.fulfill()
         }
@@ -78,15 +85,15 @@ class ThenKitTests: XCTestCase {
 
         fetchNotSoRandom(expect.description, value: testValue)
         .then(nil)
-        .then{ value in
+        .then { value in
             testDebugPrint("SUCCESS \(value)")
             XCTAssert(value as? Int == testValue)
             return value
         }
-        .then(nil) {
+        .then(nil, onCompleted: { success in
             testDebugPrint("complete - done - finished....")
             expect.fulfill()
-        }
+        })
 
         // WAIT
         waitForExpectationsWithTimeout(10) { error in
@@ -122,10 +129,10 @@ class ThenKitTests: XCTestCase {
             }
             return someError
         })
-        .then(nil) {
+        .then(nil, onCompleted: { success in
             testDebugPrint("complete - done - finished....")
             expect.fulfill()
-        }
+        })
 
         // WAIT
         waitForExpectationsWithTimeout(10) { error in
@@ -194,7 +201,7 @@ class ThenKitTests: XCTestCase {
             }
 
             return ThenKitTestsError2
-        }) {
+        }) { success in
             print ("completed")
             readyExpectation.fulfill()
         }
@@ -227,7 +234,7 @@ class ThenKitTests: XCTestCase {
         }, onRejected: { failResult in
             testDebugPrint("FAILED -- \(failResult)")
             return failResult
-        }) {
+        }) { success in
             testDebugPrint("COMPLETED!!!!")
             readyExpectation.fulfill()
         }
@@ -265,7 +272,7 @@ class ThenKitTests: XCTestCase {
             XCTAssertTrue(worked)
 
             return anotherResult
-        }, onCompleted: {
+        }, onCompleted: { success in
             testDebugPrint("completed!!!!")
             readyExpectation.fulfill()
         })
@@ -296,11 +303,10 @@ class ThenKitTests: XCTestCase {
             XCTAssertTrue(worked)
 
             return someResult
-        })
-        {
+        }, onCompleted: { success in
             testDebugPrint("COMPLETED!!!!")
             readyExpectation.fulfill()
-        }
+        })
 
         // WAIT
         waitForExpectationsWithTimeout(2) { error in
@@ -339,21 +345,19 @@ class ThenKitTests: XCTestCase {
                 let worked = anotherResult as? String == readyExpectation.description
                 XCTAssertTrue(worked)
                 return anotherResult
-            })
-            {
+            }, onCompleted: { success in
                 testDebugPrint("P1 --- completed!!!!")
-            }
+            })
 
             p2.then({ anotherResult in
                 testDebugPrint("2nd THEN for P2 ----  ... \(anotherResult)")
                 let worked = anotherResult as? String == "this is what I expect now"
                 XCTAssertTrue(worked)
                 return anotherResult
-            })
-            {
+            }, onCompleted: { success in
                 testDebugPrint("P2 --- completed!!!!")
                 readyExpectation.fulfill()
-            }
+            })
         }
 
         // WAIT
@@ -370,7 +374,8 @@ class ThenKitTests: XCTestCase {
         testDebugPrint("\(readyExpectation.description) --- P = \(p)")
 
         // then - then
-        p.then(nil){ testDebugPrint("RODRIGO -- completed???")} .then({ someResult in
+        p.then(nil)
+        .then({ someResult in
             testDebugPrint("then some result ... \(someResult)")
 
             let worked = someResult as? String == readyExpectation.description
@@ -380,7 +385,7 @@ class ThenKitTests: XCTestCase {
         }, onRejected: { failResult in
             testDebugPrint("FAILED -- \(failResult)")
             return failResult
-        }) {
+        }) { success in
             testDebugPrint("COMPLETED!!!!")
             readyExpectation.fulfill()
         }
@@ -413,10 +418,10 @@ class ThenKitTests: XCTestCase {
             testDebugPrint("Step 1 -- done with \(someResult)")
 
             return nil
-        }) {
+        }, onCompleted: { success in
             testDebugPrint("Step 1 -- COMPLETE")
             readyExpectation.fulfill()
-        }
+        })
 
         // WAIT
         waitForExpectationsWithTimeout(10) { error in
@@ -449,7 +454,7 @@ class ThenKitTests: XCTestCase {
                 XCTFail()
             }
             return ThenKitTestsError2
-        }) {
+        }) { success in
             testDebugPrint("Step 1 -- COMPLETE")
             readyExpectation.fulfill()
         }
@@ -484,7 +489,7 @@ class ThenKitTests: XCTestCase {
             testDebugPrint("2nd THEN -- rejected \(rejected)")
             XCTAssert(true)
             return rejected
-        }) {
+        }) { success in
             testDebugPrint("2nd THEN -- complete")
         }
         step0.fulfill(step0)
@@ -513,13 +518,15 @@ class ThenKitTests: XCTestCase {
             XCTFail()
             return someError
 
-        }) {
+        }) { success in
             testDebugPrint("and we're done..")
-            readyExpectation.fulfill()
+            dispatch_after(2.seconds) {
+                readyExpectation.fulfill()
+            }
         }
 
         // WAIT
-        waitForExpectationsWithTimeout(30) { error in
+        waitForExpectationsWithTimeout(40) { error in
             XCTAssertNil(error)
         }
 

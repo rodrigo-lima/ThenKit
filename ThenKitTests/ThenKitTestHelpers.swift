@@ -55,7 +55,7 @@ func fetchRandom(name:String) -> Thenable {
         p.fulfill(random()/100000)
     }
     testDebugPrint(".... created fetchRandom \(p)")
-    return p.promise
+    return p.promise()
 }
 
 func fetchNotSoRandom(name:String, value:Int) -> Thenable {
@@ -67,7 +67,7 @@ func fetchNotSoRandom(name:String, value:Int) -> Thenable {
         p.fulfill(value)
     }
     testDebugPrint(".... created fetchNotSoRandom \(p)")
-    return p.promise
+    return p.promise()
 }
 
 func failRandom(name:String) -> Thenable {
@@ -79,18 +79,17 @@ func failRandom(name:String) -> Thenable {
         p.reject(ThenKitTestsError1)
     }
     testDebugPrint(".... created failRandom \(p)")
-    return p.promise
+    return p.promise()
 }
 
 
 func httpGetPromise(someURL: String) -> Thenable {
-    let p = Promise()
-    p.name = "HTTP_GET_PROMISE"    // look for me in the debug logs
+    let p = Promise("HTTP_GET_PROMISE")
 
     guard let url = NSURL(string: someURL) else {
         let badURLErr = NSError(domain: "ThenKitTests.Error.BadURL", code: 100, userInfo: nil)
         p.reject(badURLErr)
-        return p.promise // rejected promise
+        return p.promise() // rejected promise
     }
 
     let request = NSURLRequest(URL: url)
@@ -111,6 +110,6 @@ func httpGetPromise(someURL: String) -> Thenable {
         }
     }
     task.resume()
-    return p.promise
+    return p.promise()
 }
 

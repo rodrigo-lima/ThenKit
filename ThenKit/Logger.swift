@@ -35,8 +35,12 @@ public struct Logger {
         print("\(ESCAPE)fg255,255,0;\(object)\(RESET)")
     }
 
+    public static func orange<T>(object:T) {
+        print("\(ESCAPE)fg254,143,77;\(object)\(RESET)")
+    }
+
     /// Level of log message to aid in the filtering of logs
-    enum Level: Int {
+    public enum Level: Int {
         /// Messages intended only for verbose mode
         case Verbose = 4
 
@@ -68,15 +72,15 @@ public struct Logger {
     /// :returns: the logged message
     static func log
         (level level: Level)
-        (@autoclosure name: () -> String)
-        (@autoclosure _ message: () -> String) -> String
+        (name: String)
+        (_ message: String) -> String
     {
         if level.rawValue <= Logger.logLevel.rawValue {
             let t:String = NSThread.isMainThread() ? "MAIN" :
-                NSThread.currentThread().name != "" ? NSThread.currentThread().name! : String(format:"%p", NSThread.currentThread())
+                            NSThread.currentThread().name != "" ? NSThread.currentThread().name! : String(format:"%p", NSThread.currentThread())
 
             let l = "\(level)".uppercaseString
-            let full = "\(timestampFormatter.stringFromDate(NSDate()))-\(t)>> \(l): '\(name())' >> \(message())"
+            let full = "\(timestampFormatter.stringFromDate(NSDate()))@\(t)>> \(l): '\(name)' >> \(message)"
 
             switch(level) {
             case .Debug:
@@ -96,17 +100,41 @@ public struct Logger {
     /// What is the max level to be logged
     ///
     /// Any logs under the given log level will be ignored
-    static var logLevel: Level = .Verbose
+    public static var logLevel: Level = .Debug// for now
 
     /// Logger for debug messages
-    static var verbose = Logger.log(level: .Verbose)
+    static let verboseWithPrefix = Logger.log(level: .Verbose)
 
     /// Logger for debug messages
-    static var debug = Logger.log(level: .Debug)
+    static let debugWithPrefix = Logger.log(level: .Debug)
 
     /// Logger for warnings
-    static var warn = Logger.log(level: .Warn)
-    
+    static let warnWithPrefix = Logger.log(level: .Warn)
+
     /// Logger for errors
-    static var error = Logger.log(level: .Error)
+    static let errorWithPrefix = Logger.log(level: .Error)
+
+    /// -------------------------------------
+    /// MARK:- INSTANCE vars
+
+    public var logPrefix: String = "HCMLog"
+
+    /// Logger for debug messages
+    public var debug: (String -> String) { return self.log(level: .Debug) }
+    public var error: (String -> String) { return self.log(level: .Error) }
+    public var warn: (String -> String) { return self.log(level: .Warn) }
+    public var verbose: (String -> String) { return self.log(level: .Verbose) }
+
+    public func log
+        (level level: Level)
+        (_ message: String) -> String
+    {
+        return Logger.log(level: level)(name: logPrefix)(message)
+    }
+
+    public init(prefix: String) {
+        logPrefix = prefix
+    }
+
 }
+

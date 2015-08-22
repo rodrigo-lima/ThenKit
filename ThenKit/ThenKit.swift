@@ -8,6 +8,17 @@
 
 import Foundation
 
+#if TESTING
+// -----------------------------------------------------------------------------------------------------------------
+// VERY helpful for Testing -- making sure there's no memory leak
+public var promises_counter = 0 {
+didSet {
+    let upDown = promises_counter > oldValue ? "↗️" : "↘️"
+    Logger.orange(">>> \(upDown) -- promises_counter \(promises_counter)")
+}
+}
+#endif
+
 // -----------------------------------------------------------------------------------------------------------------
 // Enums
 public enum PromisesError : ErrorType {
@@ -23,9 +34,9 @@ public enum PromiseState {
 }
 
 // TypeAlias
-typealias Function = (Any?) throws -> (Any?)
-typealias RejectedFunction = (ErrorType) -> (ErrorType)
-typealias CompleteFunction = () -> ()
+public typealias Function = (Any?) throws -> (Any?)
+public typealias RejectedFunction = (ErrorType) -> (ErrorType)
+public typealias CompleteFunction = (Bool) -> ()
 
 // MARK:- Structs
 struct CallbackInfo {
@@ -45,24 +56,21 @@ extension CallbackInfo : CustomStringConvertible {
 
 // -----------------------------------------------------------------------------------------------------------------
 // MARK:- Thenable Protocol
-protocol Thenable {
+public protocol Thenable {
     var name: String { set get }
     // Swift Protocols currently do not accept default parameter values, so let's define a few helper methods
     func then(onFulfilled:Function?) -> Thenable
     func then(onFulfilled:Function?, onRejected:RejectedFunction?) -> Thenable
-    func then(onFulfilled:Function?, onCompleted: CompleteFunction?) -> Thenable
+    func then(onFulfilled:Function?, onCompleted:CompleteFunction?) -> Thenable
     func then(onFulfilled:Function?, onRejected:RejectedFunction?, onCompleted: CompleteFunction?) -> Thenable
 }
 
 // -----------------------------------------------------------------------------------------------------------------
 // MARK:- Promise class
 
-class Promise: Thenable {
-    static let logger = Logger.verbose(name: "ThenKit") // default / verbose logger
-    static let errorL = Logger.error(name: "ThenKit")   // for errors
-
+public class Promise: Thenable {
     var internalName: String? = nil
-    var name: String {
+    public var name: String {
         get {
             return internalName ?? "\(unsafeAddressOf(self)) -- \(internalName)"
         }
@@ -74,24 +82,49 @@ class Promise: Thenable {
     var value: Any? = nil
     var reason: ErrorType = PromisesError.PendingPromise
 
-    lazy var promise: Thenable = { [weak self] in
-        let p: Thenable = self ?? Promise()
-        return p
-        }()
+    static let logger = Logger.verboseWithPrefix(name: "Promise")
 
     var callbacks:[CallbackInfo] = []
 
     let q = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
     func runBlock(block:()->()) {
-        dispatch_async(q) {
+//        dispatch_async(q) {
 //            dispatch_async(dispatch_get_main_queue()) {
-            block()
+                block()
 //            }
-        }
+//        }
+    }
+
+    func promise() -> Thenable {
+        return self as Thenable
+    }
+
+    /**
+    Convenience constructor with promise name
+    :param: promiseName name for the new promise
+    :returns: Named promise
+    */
+    public convenience init(_ promiseName: String) {
+        self.init()
+        #if TESTING
+            internalName = "[#\(promises_counter)] \(promiseName)"
+            #else
+            internalName = promiseName
+        #endif
+        Logger.orange("\t..HELLO HELLO -- '\(internalName!)'- \(self.state)")
+    }
+
+    public init() {
+        #if TESTING
+            promises_counter++
+        #endif
     }
 
     deinit {
-        Promise.logger("\t..BYE BYE -- \(self)")
+        #if TESTING
+            promises_counter--
+        #endif
+        Logger.orange("\t..BYE BYE -- '\(self.name)' - \(self.state)")
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -159,7 +192,7 @@ class Promise: Thenable {
 
     func executeOnCompletedCallback(callbackInfo:CallbackInfo) {
         Promise.logger("\t..execute_ONCOMPLETED -- <<\(self.name)>> -- callbackInfo.onCompleted: \(callbackInfo.setOrNot(callbackInfo.onCompleted))")
-        callbackInfo.onCompleted?()
+        callbackInfo.onCompleted?(state == .Fulfilled)
     }
 
     func executeCallbacks(promiseState: PromiseState) {
@@ -188,12 +221,12 @@ class Promise: Thenable {
     // -----------------------------------------------------------------------------------------------------------------
     // MARK:- fulfill / reject
 
-    func fulfill(fulfilledValue: Any?) {
+    public func fulfill(fulfilledValue: Any?) {
         Promise.logger("\n!!INI--FULFILL!! --- PROMISE_1: \(self.name) -- \(self.state)")
         // 2.1.1.1: When pending, a promise may transition to the fulfilled state.
         // 2.1.2.1: When fulfilled, a promise must not transition to any other state.
         if state != .Pending {
-            Promise.errorL("!!ABORT FULFILL!! -  NOT PENDING")
+            Promise.logger("!!ABORT FULFILL!! -  NOT PENDING")
             return
         }
         // 2.3.1: If promise and x refer to the same object, reject promise with a TypeError as the reason.
@@ -213,15 +246,15 @@ class Promise: Thenable {
         // 2.2.4: onFulfilled or onRejected must not be called until the execution context stack contains only platform code.
         runBlock { [weak self] in self?.executeCallbacks(.Fulfilled) }
 
-        Promise.logger("\n!!END--FULFILL!! --- RETURNING: PROMISE_1: \(self)\n")
+        Promise.logger("\n!!END--FULFILL!! --- PROMISE_1: \(self)\n")
     }
 
-    func reject(reasonRejected: ErrorType) {
+    public func reject(reasonRejected: ErrorType) {
         Promise.logger("\n!!INI--REJECT!! --- PROMISE_1: \(self.name) -- \(self.state)")
         // 2.1.1.1: When pending, a promise may transition to the fulfilled state.
         // 2.1.3.1: When rejected, a promise must not transition to any other state.
         if state != .Pending {
-            Promise.errorL("!!ABORT REJECT!! -  NOT PENDING")
+            Promise.logger("!!ABORT REJECT!! -  NOT PENDING")
             return
         }
 
@@ -233,27 +266,26 @@ class Promise: Thenable {
         // 2.2.4: onFulfilled or onRejected must not be called until the execution context stack contains only platform code.
         runBlock { [weak self] in self?.executeCallbacks(.Rejected) }
 
-        Promise.logger("\n!!END--REJECT!! --- RETURNING:\n\tPROMISE_1: \(self)\n")
+        Promise.logger("\n!!END--REJECT!! --- PROMISE_1: \(self)\n")
     }
 
     // -----------------------------------------------------------------------------------------------------------------
     // MARK:- Protocol methods
-    func then(onFulfilled:Function?) -> Thenable {
+    public func then(onFulfilled:Function?) -> Thenable {
         return then(onFulfilled, onRejected: nil, onCompleted: nil)
     }
 
-    func then(onFulfilled:Function?, onRejected:RejectedFunction?) -> Thenable {
+    public func then(onFulfilled:Function?, onRejected:RejectedFunction?) -> Thenable {
         return then(onFulfilled, onRejected: onRejected, onCompleted: nil)
     }
 
-    func then(onFulfilled:Function?, onCompleted: CompleteFunction?) -> Thenable {
+    public func then(onFulfilled:Function?, onCompleted: CompleteFunction?) -> Thenable {
         return then(onFulfilled, onRejected: nil, onCompleted: onCompleted)
     }
 
-    func then(onFulfilled:Function?, onRejected:RejectedFunction?, onCompleted:CompleteFunction?) -> Thenable {
+    public func then(onFulfilled:Function?, onRejected:RejectedFunction?, onCompleted:CompleteFunction?) -> Thenable {
         Promise.logger("!!THEN-INI!! - onFulfilled: \(onFulfilled) - onRejected: \(onRejected) --\n\tPROMISE_1: \(self)")
-        let promise2 = Promise()
-        promise2.name = "__THEN.\(name).then__"
+        let promise2 = Promise("_\(name).THEN__")
         let v = value
 
         switch (state) {
@@ -273,7 +305,7 @@ class Promise: Thenable {
                 // 2.2.7.3: If onFulfilled is not a function and promise1 is fulfilled, promise must be fulfilled with the same value.
                 promise2.fulfill(value)
             }
-            runBlock { onCompleted?() }
+            runBlock { onCompleted?(promise2.state == .Fulfilled) }
 
         case .Rejected:
             var r = reason
@@ -283,7 +315,7 @@ class Promise: Thenable {
             // 2.2.7.3: If onFulfilled is not a function and promise1 is fulfilled, promise must be fulfilled with the same value.
             promise2.reject(r)
 
-            runBlock { onCompleted?() }
+            runBlock { onCompleted?(promise2.state == .Fulfilled) }
         }
         // 2.2.7: then must return a promise
         let thenable: Thenable = promise2
@@ -295,7 +327,7 @@ class Promise: Thenable {
 // ---------------------------------------------------------------------------------------------------------------------
 // MARK:-
 extension Promise : CustomStringConvertible {
-    var description: String {
+    public var description: String {
         var v: String
         if let vp = value as? Promise {
             v = vp.name
@@ -355,18 +387,18 @@ func resolve(promise: Promise, x: Any?) {
             resolve(promise, x: y)
             called = true
             return y
-            },
-            onRejected: { r in
-                Promise.logger("\n\t.$.$.$.$.resolve....thenableX.on_REJECT with R [\(r)] ----\n\t\t\tPROMISE \(promise) --\n\t\t\tX \(x)")
-                // 2.3.3.3.3: If both resolvePromise and rejectPromise are called, or multiple calls to the same argument are made, the first call takes precedence, and any further calls are ignored.
-                if (called) {
-                    Promise.logger("\t.$.$.$.$.resolve....then.onRejected already called")
-                }
-                // 2.3.2.3: If/when x is rejected, reject promise with the same reason..
-                // 2.3.3.3.2: If/when rejectPromise is called with a reason r, reject promise with r.
-                promise.reject(r)
-                called = true
-                return r
+        },
+        onRejected: { r in
+            Promise.logger("\n\t.$.$.$.$.resolve....thenableX.on_REJECT with R [\(r)] ----\n\t\t\tPROMISE \(promise) --\n\t\t\tX \(x)")
+            // 2.3.3.3.3: If both resolvePromise and rejectPromise are called, or multiple calls to the same argument are made, the first call takes precedence, and any further calls are ignored.
+            if (called) {
+                Promise.logger("\t.$.$.$.$.resolve....then.onRejected already called")
+            }
+            // 2.3.2.3: If/when x is rejected, reject promise with the same reason..
+            // 2.3.3.3.2: If/when rejectPromise is called with a reason r, reject promise with r.
+            promise.reject(r)
+            called = true
+            return r
         })
     }
     else {
