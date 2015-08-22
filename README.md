@@ -75,8 +75,8 @@ httpGetPromise("http://google.com")
     print("some error ocurred \(error)")
     return error
 
-}) {
-    print("and we're done..")
+}) { success in
+    print("and we're done. -- success ? \(success)")
 }
 ```
 
@@ -89,7 +89,7 @@ These are the additional helper *then* methods of *Thenable* protocol:
 - provides *success/fulfill* and *failure/reject* blocks
 
 ##### `then(onFulfilled:Function?, onCompleted: CompleteFunction?) -> Thenable`
-- adds *onCompleted* block
+- adds *onCompleted* block, which returns true/false indicating fulfilled / rejected state
 
 ##### `then(onFulfilled:Function?, onRejected:RejectedFunction?, onCompleted: CompleteFunction?) -> Thenable`
 - complete call with the 3 blocks - success, failure, complete. Note that *onCompleted* is invoked whether it's fulfilled or rejected.
@@ -135,9 +135,9 @@ func testChainPromises() {
     // handle failures (in any step!!)
     onRejected: { someError
         print("Error \(someError)")
-    }) {
+    }) { success in
         // on complete
-        print("All steps completed")
+        print("All steps completed -- success? \(success)")
         readyExpectation.fulfill()
     }
 
