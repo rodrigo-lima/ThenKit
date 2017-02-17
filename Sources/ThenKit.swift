@@ -12,10 +12,10 @@ import Foundation
 // for Testing
 public var promisesCounter = 0 {
     didSet {
-        if promisesCounter == 0 {
-            let upDown = promisesCounter > oldValue ? "UP" : "DN"
-            Logger.log("Promise>>> \(upDown) -- promisesCounter \(promisesCounter)")
-        }
+        #if TESTING
+        let upDown = promisesCounter > oldValue ? "UP" : "DN"
+        Logger.escaped(color: .green, "Promise>>> \(upDown) -- promisesCounter \(promisesCounter)")
+        #endif
     }
 }
 
@@ -77,7 +77,7 @@ public class Promise: Thenable {
     var internalName: String?
     public var name: String {
         get {
-            return internalName ?? "\(String(describing: self)) -- \(internalName)"
+            return internalName ?? "- no name \(promisesCounter)"
         }
         set (newValue) {
             internalName = newValue
@@ -102,6 +102,10 @@ public class Promise: Thenable {
         return self as Thenable
     }
 
+    public init() {
+        promisesCounter += 1
+        //internalName = "[#\(promisesCounter)]"
+    }
     /**
      Convenience constructor with promise name
      - parameter promiseName: name for the new promise
@@ -109,17 +113,14 @@ public class Promise: Thenable {
      */
     public convenience init(_ promiseName: String) {
         self.init()
-        //        #if TESTING
         internalName = "[#\(promisesCounter)] \(promiseName)"
-        promisesCounter += 1
-        //        internalName = promiseName
-        //        Logger.orange("\t..HELLO HELLO -- '\(internalName!)'- \(self.state)")
     }
 
     deinit {
-        //        #if TESTING
         promisesCounter -= 1
-        //        Logger.orange("\t..BYE BYE -- '\(self.name)' - \(self.state)")
+        #if TESTING
+        Logger.escaped(color: .lightBlue, "\t..BYE BYE -- '\(self.name)' - \(self.state)")
+        #endif
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -327,10 +328,8 @@ extension Promise : CustomStringConvertible {
         var v: String
         if let vp = value as? Promise {
             v = vp.name
-        } else if value != nil {
-            v = "\([value].flatMap { $0 })"
         } else {
-            v = "nil"
+            v = "\(value)"
         }
         return ">>~~~~//\(name)// - state[\(state)]  - value: \(v)  -- reason: \(reason) -- callbacks<\(callbacks.count)> ~~~~<<"
     }

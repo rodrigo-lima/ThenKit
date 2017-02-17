@@ -1,0 +1,10 @@
+language: swift
+osx_image: xcode8.2
+before_install:
+  - brew update
+  - brew outdated xctool || brew upgrade xctool
+  - gem install xcpretty
+
+script:
+    - coverage.sh
+

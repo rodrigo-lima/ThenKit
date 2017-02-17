@@ -10,9 +10,9 @@ import Foundation
 @testable import ThenKit
 
 extension Logger {
-    public static func runningTest<T>(_ object: T, appendNewLine: Bool = false) {
-        print(Escape.escaped(color: .white, ".🏃. \(object)"))
-        if appendNewLine { print("") }  // or it will not escape correctly
+    public static func runningTest<T>(_ object: T, newLine: Bool = false) {
+        if newLine { print("") }  // or it will not escape correctly
+        print(Escape.escaped(color: .cyan, ".🏃. \(object)"))
     }
 }
 
@@ -20,16 +20,6 @@ extension Logger {
 // MARK: -
 let thenKitTestsError1 = NSError(domain: "ThenKitTests.Error.1", code: 1, userInfo: nil)
 let thenKitTestsError2 = NSError(domain: "ThenKitTests.Error.2", code: 2, userInfo: nil)
-
-// MARK: -
-public extension Int {
-    var second: TimeInterval { return TimeInterval(self) }
-    var seconds: TimeInterval { return TimeInterval(self) }
-    var minute: TimeInterval { return TimeInterval(self * 60) }
-    var minutes: TimeInterval { return TimeInterval(self * 60) }
-    var hour: TimeInterval { return TimeInterval(self * 3600) }
-    var hours: TimeInterval { return TimeInterval(self * 3600) }
-}
 
 // MARK: -
 public func dispatch_after(_ interval: TimeInterval, _ block: @escaping () -> Void) {
@@ -49,7 +39,7 @@ public func dispatch_after(_ interval: TimeInterval, _ queue: DispatchQueue, _ b
 
 func testDebugPrint(_ someMsg: @autoclosure () -> String?) {
     if let msg = someMsg() {
-        Logger.runningTest(">> \(msg) <<", appendNewLine: true)
+        Logger.runningTest(">> \(msg) <<")
     }
 }
 
@@ -57,7 +47,7 @@ func fetchRandom(_ name: String) -> Thenable {
     let p = Promise()
     p.name = name
 
-    dispatch_after(2.seconds) {
+    dispatch_after(2) {
         testDebugPrint(".... FULFILL fetchRandom \(p)")
         p.fulfill(fulfilledValue: arc4random()/100000)
     }
@@ -69,7 +59,7 @@ func fetchNotSoRandom(_ name: String, value: Int) -> Thenable {
     let p = Promise()
     p.name = name
 
-    dispatch_after(2.seconds) {
+    dispatch_after(2) {
         testDebugPrint(".... FULFILL fetchNotSoRandom \(p)")
         p.fulfill(fulfilledValue: value)
     }
@@ -81,7 +71,7 @@ func failRandom(name: String) -> Thenable {
     let p = Promise()
     p.name = name
 
-    dispatch_after(2.seconds) {
+    dispatch_after(2) {
         testDebugPrint(".... REJECT failRandom \(p)")
         p.reject(reasonRejected: thenKitTestsError1)
     }

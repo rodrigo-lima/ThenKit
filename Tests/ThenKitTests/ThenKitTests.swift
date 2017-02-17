@@ -12,7 +12,8 @@ import XCTest
 class ThenKitTests: XCTestCase {
     override func setUp() {
         super.setUp()
-        testDebugPrint("==============================================================================================")
+        Logger.logLevel = .warn
+        Logger.runningTest(">> -------------------- INIT TEST \(self) -------------------- <<", newLine: true)
     }
 
     override func tearDown() {
@@ -21,30 +22,6 @@ class ThenKitTests: XCTestCase {
             Logger.escaped(color: .green, "NO MEMORY LEAK -- Promise counter ==> \(promisesCounter)")
         } else {
             Logger.escaped(color: .red, "OPS!? MEMORY LEAK -- Promise counter ==> \(promisesCounter)")
-        }
-    }
-
-    func testSimple() {
-        let expect = expectation(description: "testSimple")
-        let p = Promise()
-        p.name = expect.description
-        testDebugPrint("PROMISE - \(p)")
-
-        p.then(onFulfilled: { fulfillVal in
-            testDebugPrint("PROMISE - fulfillVal:\(fulfillVal)")
-        }, onCompleted: { _ in
-            testDebugPrint("PROMISE - COMPLETE")
-        })
-        dispatch_after(1.second) { [weak p] in
-            p?.fulfill(fulfilledValue: "done")
-            dispatch_after(1.second) {
-                expect.fulfill()
-                testDebugPrint("=======================")
-            }
-        }
-        // WAIT
-        waitForExpectations(timeout: 10) { error in
-            XCTAssertNil(error)
         }
     }
 
@@ -293,7 +270,7 @@ class ThenKitTests: XCTestCase {
             XCTAssertTrue(worked)
             return "this is what I expect now"
         }
-        dispatch_after(1.second) {
+        dispatch_after(1) {
             let test2 = "testing value should not change"
             testDebugPrint("BEFORE FULFILL P again --- ... P1 \(p1) -- P2 \(p2)")
             p1.fulfill(fulfilledValue: test2)
@@ -443,7 +420,7 @@ class ThenKitTests: XCTestCase {
         }
         step0.fulfill(fulfilledValue: step0)
 
-        dispatch_after(4.seconds) {
+        dispatch_after(4) {
             testDebugPrint("hello completed - \n-- step0 \(step0)\n-- s0t \(s0t)")
             readyExpectation.fulfill()
         }
@@ -465,7 +442,7 @@ class ThenKitTests: XCTestCase {
             return someError
         }) { success in
             testDebugPrint("and we're done..= \(success)")
-            dispatch_after(2.seconds) {
+            dispatch_after(2) {
                 readyExpectation.fulfill()
             }
         }
@@ -477,7 +454,6 @@ class ThenKitTests: XCTestCase {
 
     static var allTests: [(String, (ThenKitTests) -> () throws -> Void)] {
         return [
-            ("testSimple", testSimple),
             ("testExample", testExample),
             ("testBubbleSuccess", testBubbleSuccess),
             ("testBubbleReject", testBubbleReject),
