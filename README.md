@@ -1,4 +1,6 @@
 # ThenKit
+[![Build Status](https://travis-ci.org/rodrigo-lima/ThenKit.svg?branch=1.0.0)](https://travis-ci.org/rodrigo-lima/ThenKit)
+
 Promises/A+ implementation in Swift 2 inspired by Pinky - http://lazd.github.io/Pinky/
 
 When researching [Promises/A+](https://promisesaplus.com), I was looking for a really simple implementation of the spec to better understand the data structures being using and how callbacks/closures/blocks were managed and fired during fulfilled / rejected.
