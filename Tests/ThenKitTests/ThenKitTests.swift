@@ -10,139 +10,124 @@ import XCTest
 @testable import ThenKit
 
 class ThenKitTests: XCTestCase {
-
     override func setUp() {
         super.setUp()
-        // Put setup code here. This method is called before the invocation of each test method in the class.
         testDebugPrint("==============================================================================================")
-        Logger.logLevel = Logger.Level.Verbose
     }
 
     override func tearDown() {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
         super.tearDown()
-        if promises_counter == 0 {
-            Logger.green("NO MEMORY LEAK -- Promise counter ==> \(promises_counter)")
-        }
-        else {
-            Logger.red("OPS!? MEMORY LEAK -- Promise counter ==> \(promises_counter)")
+        if promisesCounter == 0 {
+            Logger.escaped(color: .green, "NO MEMORY LEAK -- Promise counter ==> \(promisesCounter)")
+        } else {
+            Logger.escaped(color: .red, "OPS!? MEMORY LEAK -- Promise counter ==> \(promisesCounter)")
         }
     }
 
-
     func testSimple() {
-        let expect = expectationWithDescription("testSimple")
+        let expect = expectation(description: "testSimple")
         let p = Promise()
         p.name = expect.description
         testDebugPrint("PROMISE - \(p)")
 
-        p.then({ fulfillVal in
+        p.then(onFulfilled: { fulfillVal in
             testDebugPrint("PROMISE - fulfillVal:\(fulfillVal)")
-        }) { success in
+        }, onCompleted: { _ in
             testDebugPrint("PROMISE - COMPLETE")
-        }
-
+        })
         dispatch_after(1.second) { [weak p] in
-            p?.fulfill("done")
-
+            p?.fulfill(fulfilledValue: "done")
             dispatch_after(1.second) {
                 expect.fulfill()
                 testDebugPrint("=======================")
             }
         }
-
         // WAIT
-        waitForExpectationsWithTimeout(10) { error in
+        waitForExpectations(timeout: 10) { error in
             XCTAssertNil(error)
         }
     }
 
     func testExample() {
-        let expect = expectationWithDescription("testExample")
-
+        let expect = expectation(description: "testExample")
         let fr = fetchRandom(expect.description)
-        fr.then({ value in
+        fr.then(onFulfilled: { value in
             testDebugPrint("SUCCESS \(value)")
             return value
         }, onRejected: { reasone in
             testDebugPrint("FAILURE \(reasone)")
             return reasone
         })
-        .then(nil, onRejected: nil) { success in
-            testDebugPrint("FINAL COMPLETE BLOCK...")
+        .then(onFulfilled: nil, onRejected: nil) { success in
+            testDebugPrint("FINAL COMPLETE = \(success)")
             expect.fulfill()
         }
-
         // WAIT
-        waitForExpectationsWithTimeout(10) { error in
+        waitForExpectations(timeout: 10) { error in
             XCTAssertNil(error)
         }
     }
 
     func testBubbleSuccess() {
-        let expect = expectationWithDescription("testBubbleSuccess")
+        let expect = expectation(description: "testBubbleSuccess")
         let testValue = 1234
 
         fetchNotSoRandom(expect.description, value: testValue)
-        .then(nil)
+        .then(onFulfilled: nil)
         .then { value in
             testDebugPrint("SUCCESS \(value)")
             XCTAssert(value as? Int == testValue)
             return value
         }
-        .then(nil, onCompleted: { success in
-            testDebugPrint("complete - done - finished....")
-            expect.fulfill()
+        .then(onFulfilled: nil,
+              onCompleted: { success in
+                testDebugPrint("complete - done - finished.... = \(success)")
+                expect.fulfill()
         })
-
         // WAIT
-        waitForExpectationsWithTimeout(10) { error in
+        waitForExpectations(timeout: 10) { error in
             XCTAssertNil(error)
         }
     }
 
     func testBubbleReject() {
-        let expect = expectationWithDescription("testBubbleReject")
+        let expect = expectation(description: "testBubbleReject")
         let testValue = 1234
-
         fetchNotSoRandom(expect.description, value: testValue)
         .then { value in
             testDebugPrint("SUCCESS \(value)")
             XCTAssert(value as? Int == testValue)
-
             //now, throw an error here and see if it's caught below
-            throw ThenKitTestsError1
+            throw thenKitTestsError1
         }
-        .then(nil)
-        .then({ fulfilledValue in
-            testDebugPrint("SHOULD NOT BE HERE")
+        .then(onFulfilled: nil)
+        .then(onFulfilled: { fulfilledValue in
+            testDebugPrint("SHOULD NOT BE HERE = \(fulfilledValue)")
             XCTFail()
             return nil
         }, onRejected: { someError in
             testDebugPrint("SHOULD **BE** HERE -- \(someError)")
-
-            if let nserr = someError as NSError? where nserr == ThenKitTestsError1 {
+            if let nserr = someError as NSError?, nserr == thenKitTestsError1 {
                 XCTAssertTrue(true)
-            }
-            else {
+            } else {
                 XCTFail()
             }
             return someError
         })
-        .then(nil, onCompleted: { success in
-            testDebugPrint("complete - done - finished....")
+        .then(onFulfilled: nil,
+              onCompleted: { success in
+            testDebugPrint("complete - done - finished....= \(success)")
             expect.fulfill()
         })
 
         // WAIT
-        waitForExpectationsWithTimeout(10) { error in
+        waitForExpectations(timeout: 10) { error in
             XCTAssertNil(error)
         }
     }
 
     func testPromiseThenWithSuccess() {
-        let readyExpectation = expectationWithDescription("testPromiseThenWithSuccess")
-
+        let readyExpectation = expectation(description: "testPromiseThenWithSuccess")
         // FUTURE
         let p = Promise()
         testDebugPrint("\(readyExpectation.description) --- P = \(p)")
@@ -151,80 +136,68 @@ class ThenKitTests: XCTestCase {
 
             if someResult as? String == readyExpectation.description {
                 XCTAssertTrue(true)
-            }
-            else {
+            } else {
                 XCTFail()
             }
             readyExpectation.fulfill()
             return someResult
         }
-
         // SUBSCRIBE PROMISE
-        p.fulfill(readyExpectation.description)
-
+        p.fulfill(fulfilledValue: readyExpectation.description)
         // WAIT
-        waitForExpectationsWithTimeout(2) { error in
+        waitForExpectations(timeout: 2) { error in
             XCTAssertNil(error)
         }
     }
 
     func testPromiseWithFailure() {
-        let readyExpectation = expectationWithDescription("testPromiseWithFailure")
-
+        let readyExpectation = expectation(description: "testPromiseWithFailure")
         // FUTURE
         let p = Promise()
         testDebugPrint("\(readyExpectation.description) --- P = \(p)")
-
-        p.then(nil, onRejected: { someResult in
+        p.then(onFulfilled: nil,
+               onRejected: { someResult in
             testDebugPrint("fail some result ... \(someResult)")
 
-            if let nserr = someResult as NSError? where nserr == ThenKitTestsError1 {
+            if let nserr = someResult as NSError?, nserr == thenKitTestsError1 {
                 XCTAssertTrue(true)
-            }
-            else {
+            } else {
                 XCTFail()
             }
-            return ThenKitTestsError2
+            return thenKitTestsError2
         })
-        .then({ ignored in
+        .then(onFulfilled: { ignored in
             testDebugPrint("should **NOT** Be here ... \(ignored)")
             XCTFail()
             return ignored
         }, onRejected: { rejection in
             testDebugPrint("fail 2 some result ... \(rejection)")
 
-            if let nserr = rejection as NSError? where nserr == ThenKitTestsError2 {
+            if let nserr = rejection as NSError?, nserr == thenKitTestsError2 {
                 XCTAssertTrue(true)
-            }
-            else {
+            } else {
                 XCTFail()
             }
-
-            return ThenKitTestsError2
+            return thenKitTestsError2
         }) { success in
-            print ("completed")
+            print ("completed = \(success)")
             readyExpectation.fulfill()
         }
-
         // SUBSCRIBE PROMISE
-        //        let r = Result<String,NSError>(error: HCMCommonKitGenericError)
-        p.reject(ThenKitTestsError1)
-
+        p.reject(reasonRejected: thenKitTestsError1)
         // WAIT
-        waitForExpectationsWithTimeout(10) { error in
+        waitForExpectations(timeout: 10) { error in
             XCTAssertNil(error)
         }
     }
 
     func testEmptyPromiseWithSuccess() {
-        let readyExpectation = expectationWithDescription("testEmptyPromiseWithSuccess")
-
+        let readyExpectation = expectation(description: "testEmptyPromiseWithSuccess")
         // FUTURE
         let p = Promise()
         testDebugPrint("\(readyExpectation.description) --- P = \(p)")
-
         // then / onFail / onComplete
-        p.then({ someResult in
+        p.then(onFulfilled: { someResult in
             testDebugPrint("then some result ... \(someResult)")
 
             let worked = someResult == nil
@@ -235,22 +208,19 @@ class ThenKitTests: XCTestCase {
             testDebugPrint("FAILED -- \(failResult)")
             return failResult
         }) { success in
-            testDebugPrint("COMPLETED!!!!")
+            testDebugPrint("COMPLETED!!!! = \(success)")
             readyExpectation.fulfill()
         }
-
         // SUBSCRIBE PROMISE
-        p.fulfill(nil)
-
+        p.fulfill(fulfilledValue: nil)
         // WAIT
-        waitForExpectationsWithTimeout(2) { error in
+        waitForExpectations(timeout: 2) { error in
             XCTAssertNil(error)
         }
     }
 
     func testPromiseThenAndCompleteWithSuccess() {
-        let readyExpectation = expectationWithDescription("testPromiseThenAndCompleteWithSuccess")
-
+        let readyExpectation = expectation(description: "testPromiseThenAndCompleteWithSuccess")
         // FUTURE
         let p = Promise()
         p.name = readyExpectation.description
@@ -265,7 +235,7 @@ class ThenKitTests: XCTestCase {
 
             return "hello other expectation"
         }
-        .then({ anotherResult in
+        .then(onFulfilled: { anotherResult in
             testDebugPrint("something else ... \(anotherResult)")
 
             let worked = (anotherResult as? String) == "hello other expectation"
@@ -273,58 +243,49 @@ class ThenKitTests: XCTestCase {
 
             return anotherResult
         }, onCompleted: { success in
-            testDebugPrint("completed!!!!")
+            testDebugPrint("completed!!!! = \(success)")
             readyExpectation.fulfill()
         })
-
         // SUBSCRIBE PROMISE
-        p.fulfill(readyExpectation.description)
-
+        p.fulfill(fulfilledValue: readyExpectation.description)
         // WAIT
-        waitForExpectationsWithTimeout(5) { error in
+        waitForExpectations(timeout: 5) { error in
             XCTAssertNil(error)
         }
     }
 
     func testCompletedPromise() {
-        let readyExpectation = expectationWithDescription("testCompletedPromise")
-
+        let readyExpectation = expectation(description: "testCompletedPromise")
         // FUTURE
         let p = Promise()
         testDebugPrint("testCompletedPromise Promise ... \(p)")
 
         // first fulfill
-        p.fulfill(readyExpectation.description)
-
+        p.fulfill(fulfilledValue: readyExpectation.description)
         // then / onFail
-        p.then({ someResult in
+        p.then(onFulfilled: { someResult in
             testDebugPrint("then some result on completed Promise ... \(someResult)")
             let worked = someResult as? String == readyExpectation.description
             XCTAssertTrue(worked)
-
             return someResult
         }, onCompleted: { success in
-            testDebugPrint("COMPLETED!!!!")
+            testDebugPrint("COMPLETED!!!! = \(success)")
             readyExpectation.fulfill()
         })
-
         // WAIT
-        waitForExpectationsWithTimeout(2) { error in
+        waitForExpectations(timeout: 2) { error in
             XCTAssertNil(error)
         }
     }
 
     func testShouldNotChangeValueAfterFullfilled() {
-        let readyExpectation = expectationWithDescription("testShouldNotChangeValueAfterFullfilled")
-
+        let readyExpectation = expectation(description: "testShouldNotChangeValueAfterFullfilled")
         // FUTURE
         let p1 = Promise()
         p1.name = "P1"
         testDebugPrint("\(readyExpectation.description) --- P = \(p1)")
-
         // first fulfill
-        p1.fulfill(readyExpectation.description)
-
+        p1.fulfill(fulfilledValue: readyExpectation.description)
         // then
         let p2 = p1.then { someResult in
             testDebugPrint("1st THEN --- ... \(someResult)")
@@ -332,50 +293,46 @@ class ThenKitTests: XCTestCase {
             XCTAssertTrue(worked)
             return "this is what I expect now"
         }
-
         dispatch_after(1.second) {
             let test2 = "testing value should not change"
             testDebugPrint("BEFORE FULFILL P again --- ... P1 \(p1) -- P2 \(p2)")
-            p1.fulfill(test2)
+            p1.fulfill(fulfilledValue: test2)
             testDebugPrint("AFTER FULFILL P again --- ... P1 \(p1) -- P2 \(p2)")
 
             // promise should actually retain "this is what I expect now" and **not** "testing value should not change"
-            p1.then({ anotherResult in
+            p1.then(onFulfilled: { anotherResult in
                 testDebugPrint("2nd THEN for P1 ----  ... \(anotherResult)")
                 let worked = anotherResult as? String == readyExpectation.description
                 XCTAssertTrue(worked)
                 return anotherResult
             }, onCompleted: { success in
-                testDebugPrint("P1 --- completed!!!!")
+                testDebugPrint("P1 --- completed!!!! = \(success)")
             })
 
-            p2.then({ anotherResult in
+            p2.then(onFulfilled: { anotherResult in
                 testDebugPrint("2nd THEN for P2 ----  ... \(anotherResult)")
                 let worked = anotherResult as? String == "this is what I expect now"
                 XCTAssertTrue(worked)
                 return anotherResult
             }, onCompleted: { success in
-                testDebugPrint("P2 --- completed!!!!")
+                testDebugPrint("P2 --- completed!!!! = \(success)")
                 readyExpectation.fulfill()
             })
         }
-
         // WAIT
-        waitForExpectationsWithTimeout(5) { error in
+        waitForExpectations(timeout: 5) { error in
             XCTAssertNil(error)
         }
     }
 
     func testNilThenPomise() {
-        let readyExpectation = expectationWithDescription("testNilThenPomise")
-
+        let readyExpectation = expectation(description: "testNilThenPomise")
         // FUTURE
         let p = Promise()
         testDebugPrint("\(readyExpectation.description) --- P = \(p)")
-
         // then - then
-        p.then(nil)
-        .then({ someResult in
+        p.then(onFulfilled: nil)
+        .then(onFulfilled: { someResult in
             testDebugPrint("then some result ... \(someResult)")
 
             let worked = someResult as? String == readyExpectation.description
@@ -386,22 +343,19 @@ class ThenKitTests: XCTestCase {
             testDebugPrint("FAILED -- \(failResult)")
             return failResult
         }) { success in
-            testDebugPrint("COMPLETED!!!!")
+            testDebugPrint("COMPLETED!!!! = \(success)")
             readyExpectation.fulfill()
         }
-
         // SUBSCRIBE PROMISE
-        p.fulfill(readyExpectation.description)
-
+        p.fulfill(fulfilledValue: readyExpectation.description)
         // WAIT
-        waitForExpectationsWithTimeout(2) { error in
+        waitForExpectations(timeout: 2) { error in
             XCTAssertNil(error)
         }
     }
 
     func testChainPromises() {
-        let readyExpectation = expectationWithDescription("testChainPromises")
-
+        let readyExpectation = expectation(description: "testChainPromises")
         // FUTURE
         let step0 = fetchRandom("__step0__")
         var p0 = step0.then { someResult in
@@ -414,64 +368,59 @@ class ThenKitTests: XCTestCase {
         p0.name = "__p0__"
         testDebugPrint("p0 just created with \(p0)")
 
-        p0.then({ someResult in
+        p0.then(onFulfilled: { someResult in
             testDebugPrint("Step 1 -- done with \(someResult)")
 
             return nil
         }, onCompleted: { success in
-            testDebugPrint("Step 1 -- COMPLETE")
+            testDebugPrint("Step 1 -- COMPLETE = \(success)")
             readyExpectation.fulfill()
         })
-
         // WAIT
-        waitForExpectationsWithTimeout(10) { error in
+        waitForExpectations(timeout: 10) { error in
             XCTAssertNil(error)
         }
     }
 
     func testChainPromiseAndFail() {
-        let readyExpectation = expectationWithDescription("testChainPromiseAndFail")
-
+        let readyExpectation = expectation(description: "testChainPromiseAndFail")
         // FUTURE
         let step0 = fetchRandom("__step0__")
         step0.then { someResult in
             testDebugPrint("Step 0 -- done with \(someResult)")
 
-            let step1 = failRandom("__step1__")
+            let step1 = failRandom(name: "__step1__")
             testDebugPrint("step1 THAT FAILS .... ")
             return step1
         }
-        .then({ someResult in
+        .then(onFulfilled: { someResult in
             testDebugPrint("should not be here... \(someResult)")
             return nil
 
         }, onRejected: { someError in
             testDebugPrint("should **be** here ... \(someError)")
-            if let nserr = someError as NSError? where nserr == ThenKitTestsError1 {
+            if let nserr = someError as NSError?, nserr == thenKitTestsError1 {
                 XCTAssertTrue(true)
-            }
-            else {
+            } else {
                 XCTFail()
             }
-            return ThenKitTestsError2
+            return thenKitTestsError2
         }) { success in
-            testDebugPrint("Step 1 -- COMPLETE")
+            testDebugPrint("Step 1 -- COMPLETE = \(success)")
             readyExpectation.fulfill()
         }
-
         // WAIT
-        waitForExpectationsWithTimeout(10) { error in
+        waitForExpectations(timeout: 10) { error in
             XCTAssertNil(error)
         }
     }
-    
+
     func testChainSamePromise() {
-        let readyExpectation = expectationWithDescription("testChainSamePromises")
-        
+        let readyExpectation = expectation(description: "testChainSamePromises")
         // FUTURE
         let step0 = Promise()
         step0.name = "step0"
-        let s0t = step0.then({ [weak step0] fulfilled in
+        let s0t = step0.then(onFulfilled: { [weak step0] fulfilled in
             testDebugPrint("1st THEN -- fulfilled \(fulfilled)")
             XCTFail()
             return step0
@@ -481,7 +430,7 @@ class ThenKitTests: XCTestCase {
             XCTAssert(true)
             return rejected
         })
-        .then({ fulfilled in
+        .then(onFulfilled: { fulfilled in
             testDebugPrint("2nd THEN -- fulfilled \(fulfilled)")
             XCTFail()
             return nil
@@ -490,45 +439,59 @@ class ThenKitTests: XCTestCase {
             XCTAssert(true)
             return rejected
         }) { success in
-            testDebugPrint("2nd THEN -- complete")
+            testDebugPrint("2nd THEN -- complete = \(success)")
         }
-        step0.fulfill(step0)
-        
+        step0.fulfill(fulfilledValue: step0)
+
         dispatch_after(4.seconds) {
             testDebugPrint("hello completed - \n-- step0 \(step0)\n-- s0t \(s0t)")
             readyExpectation.fulfill()
         }
-        
         // WAIT
-        waitForExpectationsWithTimeout(10) { error in
+        waitForExpectations(timeout: 10) { error in
             XCTAssertNil(error)
         }
     }
 
     func testGithub() {
-        let readyExpectation = expectationWithDescription("testGithub")
-
+        let readyExpectation = expectation(description: "testGithub")
         // get a promise
-        httpGetPromise("http://github.com")
-        .then({ someResponse in
+        httpGetPromise(someURL: "http://github.com")
+        .then(onFulfilled: { someResponse in
             testDebugPrint("got this response: \(someResponse)")
-
         }, onRejected: { someError in
             testDebugPrint("some Error: \(someError)")
             XCTFail()
             return someError
-
         }) { success in
-            testDebugPrint("and we're done..")
+            testDebugPrint("and we're done..= \(success)")
             dispatch_after(2.seconds) {
                 readyExpectation.fulfill()
             }
         }
-
         // WAIT
-        waitForExpectationsWithTimeout(40) { error in
+        waitForExpectations(timeout: 40) { error in
             XCTAssertNil(error)
         }
+    }
 
+    static var allTests: [(String, (ThenKitTests) -> () throws -> Void)] {
+        return [
+            ("testSimple", testSimple),
+            ("testExample", testExample),
+            ("testBubbleSuccess", testBubbleSuccess),
+            ("testBubbleReject", testBubbleReject),
+            ("testPromiseThenWithSuccess", testPromiseThenWithSuccess),
+            ("testPromiseWithFailure", testPromiseWithFailure),
+            ("testEmptyPromiseWithSuccess", testEmptyPromiseWithSuccess),
+            ("testPromiseThenAndCompleteWithSuccess", testPromiseThenAndCompleteWithSuccess),
+            ("testCompletedPromise", testCompletedPromise),
+            ("testShouldNotChangeValueAfterFullfilled", testShouldNotChangeValueAfterFullfilled),
+            ("testNilThenPomise", testNilThenPomise),
+            ("testChainPromises", testChainPromises),
+            ("testChainPromiseAndFail", testChainPromiseAndFail),
+            ("testChainSamePromise", testChainSamePromise),
+            ("testGithub", testGithub)
+        ]
     }
 }

@@ -1,0 +1,9 @@
+disabled_rules: # rule identifiers to exclude from running
+  - variable_name
+  - type_body_length
+
+line_length:
+  - 150
+  - 250
+
+file_length: 500
