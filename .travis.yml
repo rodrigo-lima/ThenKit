@@ -8,3 +8,5 @@ before_install:
 script:
     - ./coverage.sh
 
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

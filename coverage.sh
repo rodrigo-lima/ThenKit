@@ -16,7 +16,8 @@ swift package generate-xcodeproj --enable-code-coverage -v
 xcodebuild -scheme ThenKit -showBuildSettings > ${BUILD_SETTINGS}
 
 # build
-xcodebuild -scheme ThenKit -enableCodeCoverage YES test | xcpretty
+xcodebuild -scheme ThenKit -enableCodeCoverage YES test
+# | xcpretty
 
 # Project Temp Root ends up with /Build/Intermediates/
 PROJECT_TEMP_ROOT=$(grep -m1 PROJECT_TEMP_ROOT ${BUILD_SETTINGS} | cut -d= -f2 | xargs)
