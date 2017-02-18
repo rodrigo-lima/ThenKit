@@ -1,5 +1,5 @@
 # ThenKit
-[![Build Status](https://travis-ci.org/rodrigo-lima/ThenKit.svg?branch=master)](https://travis-ci.org/rodrigo-lima/ThenKit)
+[![Build Status](https://travis-ci.org/rodrigo-lima/ThenKit.svg?branch=master)](https://travis-ci.org/rodrigo-lima/ThenKit) [![codecov](https://codecov.io/gh/rodrigo-lima/ThenKit/branch/master/graph/badge.svg)](https://codecov.io/gh/rodrigo-lima/ThenKit)
 
 Promises/A+ implementation in Swift 2 inspired by Pinky - http://lazd.github.io/Pinky/
 
